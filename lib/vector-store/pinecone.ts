@@ -83,10 +83,19 @@ export async function getEmbedding(text: string): Promise<number[]> {
 			inputs: text,
 		});
 
-		// Convert to number array
-		return Array.isArray(response[0])
-			? response[0]
-			: (response as number[]);
+		// Handle both single array and array-of-arrays
+		if (Array.isArray(response)) {
+			if (response.length > 0 && Array.isArray(response[0])) {
+				// Case: number[][] → take first array
+				return response[0] as number[];
+			} else {
+				// Case: number[] → return as-is
+				return response as number[];
+			}
+		}
+
+		// Fallback: should not happen for string input
+		throw new Error("Unexpected embedding format from Hugging Face");
 	});
 }
 
