@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchVectorStore } from "@/lib/vector-store/pinecone";
 import { generateFromHuggingFace } from "@/lib/utils/hf-client";
-import { handleApiError } from "@/lib/utils/handleApiError";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -60,14 +59,17 @@ console.log("🤖 Generating response...");
 				temperature: 0.3,
 				wait_for_model: true,
 			});
-		} catch (hfError: any) {
+		} catch (hfError) {
 			console.error("❌ HF Generation Error:", hfError);
 
-			if (hfError.status === 400) {
+			const errorMessage = hfError instanceof Error ? hfError.message : "Failed to process chat message";
+		const errorStatus = hfError && typeof hfError === "object" && "status" in hfError ? (hfError as { status?: number }).status : 500;
+
+			if (errorStatus === 400) {
 				return NextResponse.json(
 					{
 						error: "Model not supported",
-						details: hfError.message || 
+						details: errorMessage || 
 							"The configured model is not available through Inference Providers. Please update HF_MODEL in your .env.local to a supported model like 'meta-llama/Llama-3.1-8B-Instruct'",
 					},
 					{ status: 400 }
@@ -75,7 +77,7 @@ console.log("🤖 Generating response...");
 			}
 
 			// ✅ IMPROVED: Specific error messages for different scenarios
-			if (hfError.status === 503) {
+			if (errorStatus === 503) {
 				return NextResponse.json(
 					{
 						error: "The AI model is currently loading",
@@ -85,7 +87,7 @@ console.log("🤖 Generating response...");
 				);
 			}
 
-			if (hfError.status === 404) {
+			if (errorStatus === 404) {
 				return NextResponse.json(
 					{
 						error: "Model not available",
@@ -121,19 +123,20 @@ console.log("🤖 Generating response...");
 	} catch (error) {
 		console.error("❌ Chat API Error:", error);
 
-		// ✅ IMPROVED: Comprehensive error response
+		const errorMessage = error instanceof Error ? error.message : "Failed to process chat message";
+		const errorStatus = error && typeof error === "object" && "status" in error ? (error as { status?: number }).status : 500;
+
 		return NextResponse.json(
 			{
-				error: error.message || "Failed to process chat message",
+				error: errorMessage,
 				details:
-					error.status === 503
+					errorStatus === 503
 						? "The AI model is currently loading. This usually takes 30-60 seconds. Please try again shortly."
-						: error.status === 404
+						: errorStatus === 404
 						? "The configured model is not available. Please contact support."
 						: "An unexpected error occurred. Please try again or contact support if the issue persists.",
 			},
-			{ status: error.status || 500 }
+			{ status: errorStatus }
 		);
-
 	}
 }

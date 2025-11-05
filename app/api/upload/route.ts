@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 		console.error("Upload error:", error);
 
 		// ✅ ADDED: Better error messages based on error type
-		if (error.code === "insufficient_quota") {
+		if (error?.code === "insufficient_quota") {
 			return NextResponse.json(
 				{
 					error: "OpenAI API quota exceeded. Please add credits to your OpenAI account.",
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		if (error.status === 401) {
+		if (error?.status === 401) {
 			return NextResponse.json(
 				{
 					error: "Invalid OpenAI API key. Please check your configuration.",
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		return NextResponse.json(
-			{ error: error.message || "Failed to process PDF" },
+			{ error: error?.message || "Failed to process PDF" },
 			{ status: 500 }
 		);
 	}
