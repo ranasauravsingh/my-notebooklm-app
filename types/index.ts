@@ -14,9 +14,10 @@ export interface Citation {
 export interface PDFDocument {
   id: string;
   name: string;
-  url: string;
-  uploadedAt: Date;
+  url?: string;
   pageCount: number;
+  chunkCount?: number;
+  uploadedAt: string;
 }
 
 export interface ChatRequest {

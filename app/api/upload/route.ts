@@ -4,10 +4,9 @@ import {
 	addDocumentToVectorStore,
 	createPineconeIndex,
 } from "@/lib/vector-store/pinecone";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { randomUUID } from "crypto";
-import { existsSync } from "fs";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
 	try {
@@ -40,24 +39,28 @@ export async function POST(request: NextRequest) {
 
 		const bytes = await file.arrayBuffer();
 		const buffer = Buffer.from(bytes);
-		const documentId = randomUUID();
+		const documentId = `${Date.now()}-${Math.random()
+			.toString(36)
+			.substring(7)}`;
 
-		// ✅ ADDED: Create uploads directory if it doesn't exist
-		const uploadsDir = join(process.cwd(), "public", "uploads");
-		if (!existsSync(uploadsDir)) {
-			await mkdir(uploadsDir, { recursive: true });
-		}
-
-		const fileName = `${documentId}.pdf`;
-		const filePath = join(uploadsDir, fileName);
-		await writeFile(filePath, buffer);
-
-		console.log("Parsing PDF...");
 		const { text, pageCount } = await parsePDF(buffer);
+		if (!text || text.trim().length === 0) {
+			return NextResponse.json(
+				{ error: "PDF appears to be empty or unreadable" },
+				{ status: 400 }
+			);
+		}
 
 		console.log("Chunking text...");
 		const chunks = chunkText(text);
 		console.log(`Created ${chunks.length} chunks`);
+
+		if (chunks.length === 0) {
+			return NextResponse.json(
+				{ error: "Failed to create text chunks from PDF" },
+				{ status: 400 }
+			);
+		}
 
 		console.log("Checking Pinecone index...");
 		await createPineconeIndex();
@@ -66,11 +69,15 @@ export async function POST(request: NextRequest) {
 		await addDocumentToVectorStore(documentId, chunks);
 		console.log("Upload complete!");
 
+		const base64PDF = buffer.toString('base64');
+		const dataUrl = `data:application/pdf;base64,${base64PDF}`;
+
 		return NextResponse.json({
 			id: documentId,
 			name: file.name,
-			url: `/uploads/${fileName}`,
+			url: dataUrl,
 			pageCount,
+			chunkCount: chunks.length,
 			uploadedAt: new Date().toISOString(),
 		});
 	} catch (error: any) {
@@ -80,18 +87,50 @@ export async function POST(request: NextRequest) {
 		if (error?.code === "insufficient_quota") {
 			return NextResponse.json(
 				{
-					error: "OpenAI API quota exceeded. Please add credits to your OpenAI account.",
+					error: "OpenAI API quota exceeded",
+					details:
+						"Please add credits to your OpenAI account or check your billing.",
 				},
 				{ status: 402 }
 			);
 		}
 
-		if (error?.status === 401) {
+		if (error?.status === 401 || error?.code === "invalid_api_key") {
 			return NextResponse.json(
 				{
-					error: "Invalid OpenAI API key. Please check your configuration.",
+					error: "Invalid API key",
+					details:
+						"Please check your OpenAI API key in environment variables.",
 				},
 				{ status: 401 }
+			);
+		}
+
+		if (
+			error?.message?.includes("Pinecone") ||
+			error?.message?.includes("PINECONE")
+		) {
+			return NextResponse.json(
+				{
+					error: "Vector store error",
+					details:
+						"Failed to connect to Pinecone. Please check your API key and index configuration.",
+				},
+				{ status: 503 }
+			);
+		}
+
+		if (
+			error?.message?.includes("PDF") ||
+			error?.message?.includes("parse")
+		) {
+			return NextResponse.json(
+				{
+					error: "PDF parsing failed",
+					details:
+						"The PDF file may be corrupted or password-protected.",
+				},
+				{ status: 400 }
 			);
 		}
 
@@ -100,4 +139,11 @@ export async function POST(request: NextRequest) {
 			{ status: 500 }
 		);
 	}
+}
+
+export async function GET() {
+	return NextResponse.json(
+		{ error: "Method not allowed. Use POST to upload files." },
+		{ status: 405 }
+	);
 }

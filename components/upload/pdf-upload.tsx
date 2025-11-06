@@ -20,6 +20,7 @@ export function PDFUpload() {
 			if (!file) return;
 
 			setUploading(true);
+			const tempUrl = URL.createObjectURL(file);
 			const formData = new FormData();
 			formData.append("file", file);
 
@@ -28,13 +29,33 @@ export function PDFUpload() {
 					headers: { "Content-Type": "multipart/form-data" },
 				});
 
-				setCurrentDocument(response.data);
+				setCurrentDocument({
+					...response.data,
+					// Fallback to temp URL if server doesn't return url (backwards compatibility)
+					url: response.data.url || tempUrl,
+				});
+
 				clearMessages();
 				toast.success("PDF uploaded successfully!");
+
+				if (response.data.url) {
+					URL.revokeObjectURL(tempUrl);
+				}
 			} catch (error: unknown) {
-				const err = error as AxiosError<{ error?: string }>;
+				URL.revokeObjectURL(tempUrl);
+
+				const err = error as AxiosError<{
+					error?: string;
+					details?: string;
+				}>;
+				const errorMessage =
+					err.response?.data?.error || "Failed to upload PDF";
+				const errorDetails = err.response?.data?.details;
+
 				toast.error(
-					err.response?.data?.error || "Failed to upload PDF"
+					errorDetails
+						? `${errorMessage}: ${errorDetails}`
+						: errorMessage
 				);
 			} finally {
 				setUploading(false);
@@ -66,27 +87,33 @@ export function PDFUpload() {
 
 				<div className="flex flex-col items-center gap-4">
 					{uploading ? (
-						<Loader2 className="w-12 h-12 animate-spin text-primary" />
+						<>
+							<Loader2 className="w-12 h-12 animate-spin text-primary" />
+							<div className="text-center">
+								<p className="text-lg font-semibold mb-1">
+									Processing PDF...
+								</p>
+								<p className="text-sm text-gray-500">
+									Extracting text and creating embeddings
+								</p>
+							</div>
+						</>
 					) : (
-						<Upload className="w-12 h-12 text-gray-400" />
-					)}
-
-					<div>
-						<p className="text-lg font-semibold mb-2">
-							{uploading
-								? "Processing PDF..."
-								: "Upload your PDF document"}
-						</p>
-						<p className="text-sm text-gray-500">
-							Drag and drop or click to browse (Max 10MB)
-						</p>
-					</div>
-
-					{!uploading && (
-						<Button type="button" variant="outline">
-							<FileText className="w-4 h-4 mr-2" />
-							Select PDF
-						</Button>
+						<>
+							<Upload className="w-12 h-12 text-gray-400" />
+							<div>
+								<p className="text-lg font-semibold mb-2">
+									Upload your PDF document
+								</p>
+								<p className="text-sm text-gray-500">
+									Drag and drop or click to browse (Max 10MB)
+								</p>
+							</div>
+							<Button type="button" variant="outline">
+								<FileText className="w-4 h-4 mr-2" />
+								Select PDF
+							</Button>
+						</>
 					)}
 				</div>
 			</div>
