@@ -7,18 +7,6 @@ import {
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-export const dynamic = "force-dynamic";
-
-export async function OPTIONS(request: NextRequest) {
-	return new NextResponse(null, {
-		status: 204,
-		headers: {
-			"Access-Control-Allow-Origin": "*",
-			"Access-Control-Allow-Methods": "POST, OPTIONS",
-			"Access-Control-Allow-Headers": "Content-Type",
-		},
-	});
-}
 
 export async function POST(request: NextRequest) {
 	try {
@@ -84,22 +72,14 @@ export async function POST(request: NextRequest) {
 		const base64PDF = buffer.toString("base64");
 		const dataUrl = `data:application/pdf;base64,${base64PDF}`;
 
-		return NextResponse.json(
-			{
-				id: documentId,
-				name: file.name,
-				url: dataUrl,
-				pageCount,
-				chunkCount: chunks.length,
-				uploadedAt: new Date().toISOString(),
-			},
-			{
-				status: 200,
-				headers: {
-					"Access-Control-Allow-Origin": "*",
-				},
-			}
-		);
+		return NextResponse.json({
+			id: documentId,
+			name: file.name,
+			url: dataUrl,
+			pageCount,
+			chunkCount: chunks.length,
+			uploadedAt: new Date().toISOString(),
+		});
 	} catch (error: any) {
 		console.error("Upload error:", error);
 

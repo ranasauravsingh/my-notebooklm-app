@@ -1,18 +1,10 @@
 {
-	"version": 2,
-	"buildCommand": "npm run build",
-	"devCommand": "npm run dev",
-	"installCommand": "npm install",
-	"framework": "nextjs",
-	"regions": ["iad1"],
 	"functions": {
 		"app/api/upload/route.ts": {
-			"maxDuration": 60,
-			"memory": 3008
+			"maxDuration": 60
 		},
 		"app/api/chat/route.ts": {
-			"maxDuration": 30,
-			"memory": 1024
+			"maxDuration": 30
 		}
 	}
 }
