@@ -1,3 +1,4 @@
+// app/api/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { parsePDF, chunkText } from "@/lib/utils/pdf-processor";
 import {
@@ -8,6 +9,7 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+// ✅ Only export POST and OPTIONS
 export async function POST(request: NextRequest) {
 	try {
 		const formData = await request.formData();
@@ -28,7 +30,8 @@ export async function POST(request: NextRequest) {
 		}
 
 		const maxSize = parseInt(
-			process.env.NEXT_PUBLIC_MAX_FILE_SIZE || "10485760"
+			process.env.NEXT_PUBLIC_MAX_FILE_SIZE || "10485760",
+			10
 		);
 		if (file.size > maxSize) {
 			return NextResponse.json(
@@ -83,7 +86,6 @@ export async function POST(request: NextRequest) {
 	} catch (error: any) {
 		console.error("Upload error:", error);
 
-		// ✅ ADDED: Better error messages based on error type
 		if (error?.code === "insufficient_quota") {
 			return NextResponse.json(
 				{
@@ -106,10 +108,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		if (
-			error?.message?.includes("Pinecone") ||
-			error?.message?.includes("PINECONE")
-		) {
+		if (error?.message?.includes("Pinecone")) {
 			return NextResponse.json(
 				{
 					error: "Vector store error",
@@ -141,9 +140,15 @@ export async function POST(request: NextRequest) {
 	}
 }
 
-export async function GET() {
-	return NextResponse.json(
-		{ error: "Method not allowed. Use POST to upload files." },
-		{ status: 405 }
-	);
+// ✅ Add OPTIONS for CORS preflight
+export async function OPTIONS() {
+	return new NextResponse(null, {
+		status: 200,
+		headers: {
+			"Access-Control-Allow-Origin": "*",
+			"Access-Control-Allow-Methods": "POST, OPTIONS",
+			"Access-Control-Allow-Headers":
+				"Content-Type, Authorization, X-Requested-With",
+		},
+	});
 }

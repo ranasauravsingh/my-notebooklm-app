@@ -1,9 +1,9 @@
 {
 	"functions": {
-		"app/api/upload/route.ts": {
+		"api/upload.js": {
 			"maxDuration": 60
 		},
-		"app/api/chat/route.ts": {
+		"api/chat.js": {
 			"maxDuration": 30
 		}
 	}
