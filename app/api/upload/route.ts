@@ -8,13 +8,12 @@ import {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
 	try {
-		// ✅ Step 1: Test formData parsing
 		const formData = await request.formData();
 		const file = formData.get("file") as File;
-
 		if (!file) {
 			return NextResponse.json(
 				{ error: "No file provided" },
@@ -22,7 +21,6 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// ✅ Step 2: Validate file
 		if (file.type !== "application/pdf") {
 			return NextResponse.json(
 				{ error: "Only PDF files are allowed" },
@@ -31,9 +29,9 @@ export async function POST(request: NextRequest) {
 		}
 
 		const maxSize = parseInt(
-			process.env.NEXT_PUBLIC_MAX_FILE_SIZE || "10485760",
-			10
+			process.env.NEXT_PUBLIC_MAX_FILE_SIZE || "10485760"
 		);
+
 		if (file.size > maxSize) {
 			return NextResponse.json(
 				{ error: "File size exceeds 10MB" },
@@ -41,17 +39,13 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// ✅ Step 3: Get buffer
 		const bytes = await file.arrayBuffer();
 		const buffer = Buffer.from(bytes);
 		const documentId = `${Date.now()}-${Math.random()
 			.toString(36)
 			.substring(7)}`;
 
-		// ✅ Step 4: Parse PDF (THIS MIGHT FAIL)
-		console.log("Starting PDF parse...");
 		const { text, pageCount } = await parsePDF(buffer);
-		console.log("PDF parsed successfully");
 
 		if (!text || text.trim().length === 0) {
 			return NextResponse.json(
@@ -60,7 +54,6 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// ✅ Step 5: Chunk text
 		console.log("Chunking text...");
 		const chunks = chunkText(text);
 		console.log(`Created ${chunks.length} chunks`);
@@ -72,15 +65,12 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// ✅ Step 6: Vector store operations (THIS MIGHT TIMEOUT)
 		console.log("Checking Pinecone index...");
 		await createPineconeIndex();
-
 		console.log("Adding to vector store...");
 		await addDocumentToVectorStore(documentId, chunks);
 		console.log("Upload complete!");
 
-		// ✅ Step 7: Return response
 		const base64PDF = buffer.toString("base64");
 		const dataUrl = `data:application/pdf;base64,${base64PDF}`;
 
@@ -93,13 +83,8 @@ export async function POST(request: NextRequest) {
 			uploadedAt: new Date().toISOString(),
 		});
 	} catch (error: any) {
-		// ✅ Enhanced error logging
-		console.error("Upload error details:", {
-			message: error?.message,
-			code: error?.code,
-			status: error?.status,
-			stack: error?.stack,
-		});
+		console.error("Upload error:", error);
+		// ✅ ADDED: Better error messages based on error type
 
 		if (error?.code === "insufficient_quota") {
 			return NextResponse.json(
@@ -116,6 +101,7 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json(
 				{
 					error: "Invalid API key",
+
 					details:
 						"Please check your OpenAI API key in environment variables.",
 				},
@@ -123,7 +109,10 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		if (error?.message?.includes("Pinecone")) {
+		if (
+			error?.message?.includes("Pinecone") ||
+			error?.message?.includes("PINECONE")
+		) {
 			return NextResponse.json(
 				{
 					error: "Vector store error",
@@ -148,24 +137,22 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// ✅ Return actual error for debugging
 		return NextResponse.json(
-			{
-				error: error?.message || "Failed to process PDF",
-				details: error?.stack || "No stack trace available",
-			},
+			{ error: error?.message || "Failed to process PDF" },
 			{ status: 500 }
 		);
 	}
 }
 
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
 	return new NextResponse(null, {
 		status: 204,
 		headers: {
 			"Access-Control-Allow-Origin": "*",
 			"Access-Control-Allow-Methods": "POST, OPTIONS",
-			"Access-Control-Allow-Headers": "Content-Type, Authorization",
+			"Access-Control-Allow-Headers":
+				"Content-Type, Authorization, X-Requested-With",
+			"Access-Control-Max-Age": "86400",
 		},
 	});
 }
