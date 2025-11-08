@@ -1,7 +1,6 @@
 {
 	"version": 2,
 	"framework": "nextjs",
-	"buildCommand": "next build",
 	"functions": {
 		"app/api/upload/route.ts": {
 			"maxDuration": 60,
