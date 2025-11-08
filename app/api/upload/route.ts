@@ -6,6 +6,7 @@ import {
 	createPineconeIndex,
 } from "@/lib/vector-store/pinecone";
 
+export const dynamic = 'force-dynamic';
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
