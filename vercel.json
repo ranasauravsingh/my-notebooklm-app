@@ -6,5 +6,12 @@
 		"app/api/chat/route.ts": {
 			"maxDuration": 30
 		}
-	}
+	},
+	"routes": [
+		{
+			"src": "/api/upload",
+			"methods": ["POST", "OPTIONS"],
+			"dest": "/api/upload"
+		}
+	]
 }

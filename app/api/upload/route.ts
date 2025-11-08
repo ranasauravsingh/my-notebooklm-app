@@ -6,20 +6,22 @@ import {
 	createPineconeIndex,
 } from "@/lib/vector-store/pinecone";
 
+// ✅ ADDED: Explicit route configuration
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 export const revalidate = 0;
 export const preferredRegion = "auto";
+export const fetchCache = "force-no-store"; // ✅ NEW: Disable fetch caching
 
-// ✅ Only export POST and OPTIONS
 export async function POST(request: NextRequest) {
-	if (request.method !== "POST") {
-		return NextResponse.json(
-			{ error: "Method not allowed" },
-			{ status: 405 }
-		);
-	}
+	// ✅ REMOVED: This check is redundant and can cause issues
+	// if (request.method !== "POST") {
+	// 	return NextResponse.json(
+	// 		{ error: "Method not allowed" },
+	// 		{ status: 405 }
+	// 	);
+	// }
 
 	try {
 		const formData = await request.formData();
@@ -150,7 +152,6 @@ export async function POST(request: NextRequest) {
 	}
 }
 
-// ✅ Add OPTIONS for CORS preflight
 export async function OPTIONS(request: NextRequest) {
 	return new NextResponse(null, {
 		status: 204,
