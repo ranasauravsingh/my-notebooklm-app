@@ -10,17 +10,18 @@ const nextConfig: NextConfig = {
 	async headers() {
 		return [
 			{
+				// ✅ CHANGED: More specific matcher for API routes
 				source: "/api/:path*",
 				headers: [
 					{ key: "Access-Control-Allow-Credentials", value: "true" },
 					{ key: "Access-Control-Allow-Origin", value: "*" },
 					{
 						key: "Access-Control-Allow-Methods",
-						value: "GET,DELETE,PATCH,POST,PUT",
+						value: "GET,DELETE,PATCH,POST,PUT,OPTIONS", // ✅ Added OPTIONS
 					},
 					{
 						key: "Access-Control-Allow-Headers",
-						value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+						value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization",
 					},
 				],
 			},
@@ -38,7 +39,6 @@ const nextConfig: NextConfig = {
 			encoding: false,
 		};
 
-		// ✅ ADDED: Handle .mjs files for pdf.js worker
 		config.module.rules.push({
 			test: /\.mjs$/,
 			include: /node_modules/,
