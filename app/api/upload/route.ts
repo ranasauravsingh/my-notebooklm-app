@@ -6,12 +6,21 @@ import {
 	createPineconeIndex,
 } from "@/lib/vector-store/pinecone";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
+export const revalidate = 0;
+export const preferredRegion = "auto";
 
 // ✅ Only export POST and OPTIONS
 export async function POST(request: NextRequest) {
+	if (request.method !== "POST") {
+		return NextResponse.json(
+			{ error: "Method not allowed" },
+			{ status: 405 }
+		);
+	}
+
 	try {
 		const formData = await request.formData();
 		const file = formData.get("file") as File;
@@ -142,14 +151,15 @@ export async function POST(request: NextRequest) {
 }
 
 // ✅ Add OPTIONS for CORS preflight
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
 	return new NextResponse(null, {
-		status: 200,
+		status: 204,
 		headers: {
 			"Access-Control-Allow-Origin": "*",
 			"Access-Control-Allow-Methods": "POST, OPTIONS",
 			"Access-Control-Allow-Headers":
 				"Content-Type, Authorization, X-Requested-With",
+			"Access-Control-Max-Age": "86400",
 		},
 	});
 }
